@@ -1,0 +1,12 @@
+{
+  "name": "@metops/api",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@prisma/client": "^7.10.0",
+    "fastify": "^5.12.7"
+  },
+  "devDependencies": {
+    "prisma": "8.0.0-rc.22"
+  }
+}
