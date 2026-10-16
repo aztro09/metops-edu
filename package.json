@@ -1,21 +1,36 @@
 {
   "name": "metops-edu",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "pnpm -r --parallel --filter @metops/api --filter @metops/web run dev",
+    "dev:api": "pnpm --filter @metops/api run dev",
+    "dev:web": "pnpm --filter @metops/web run dev",
+    "build": "pnpm -r run build",
+    "typecheck": "pnpm -r run typecheck",
+    "test": "pnpm -r run test",
+    "lint": "pnpm -r run lint",
+    "format": "prettier --write .",
+    "e2e": "playwright test"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "devEngines": {
-    "packageManager": {
-      "name": "pnpm",
-      "version": "12.11.2",
-      "onFail": "download"
-    }
+  "devDependencies": {
+    "@playwright/test": "1.56.1",
+    "prettier": "3.9.10",
+    "typescript": "5.9.3"
   },
-  "packageManager": "pnpm@12.11.2",
-  "type": "module"
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "prisma",
+      "esbuild"
+    ]
+  },
+  "dependencies": {
+    "zod": "^4.6.7"
+  }
 }

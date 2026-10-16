@@ -1,10 +1,15 @@
 {
     "compilerOptions": {
         "target": "ES2022",
+        "module": "esnext",
+        "moduleResolution": "bundler",
         "strict": true,
         "noUncheckedIndexedAccess": true,
         "esModuleInterop": true,
         "skipLibCheck": true,
-        "forceConsistentCasingInFileNames": true
+        "forceConsistentCasingInFileNames": true,
+        "resolveJsonModule": true,
+        "isolatedModules": true,
+        "noEmit": true
     }
 }
