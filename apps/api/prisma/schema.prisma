@@ -1,0 +1,258 @@
+generator client{
+  provider = "prisma-client-js"
+  engineType = "client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL") //modificar dependiendo de db
+}
+
+//seguridad / usuarios
+model Role{
+  id         Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?  @db.VarChar(150)
+  users       UserRole[]
+
+  @@map("roles")
+}
+
+model User{
+  id         Int      @id @default(autoincrement())
+  passwordInstitucional   String   @unique @map("password_institucional") @db.VarChar(30)
+  name    String   @db.VarChar(50)
+  surname  String   @db.VarChar(100)
+  email    String   @unique @db.VarChar(100)
+  passwordHash String   @map("password_hash") @db.VarChar(255)
+  active   Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  lastAccess DateTime? @map("last_access") @db.Timestamptz(3)
+  roles     UserRole[]
+  createdTickets Ticket[] @relation("Reportant")
+  assignedTickets Ticket[] @relation("Assigned")
+  comments Comment[]
+  evidences Evidence[]
+  history TicketHistory[] @relation("AuthorHistory")
+  notifications Notification[]
+  refreshTokens RefreshToken[]
+
+  @@map("users")
+}
+
+model UserRole{
+  userId     Int      @map("user_id")
+  roleId     Int      @map("role_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role       Role     @relation(fields: [roleId], references: [id])
+
+  @@id([userId, roleId])
+  @@map("users_roles")
+}
+
+model RefreshToken{
+  id         Int      @id @default(autoincrement())
+  token      String   @unique
+  userId     Int      @map("user_id")
+  family     String   @db.VarChar(40)
+  hashToken  String   @unique @map("hash_token") @db.VarChar(64)
+  expiresAt  DateTime @map("expires_at") @db.Timestamptz(3)
+  usedAt     DateTime? @map("used_at") @db.Timestamptz(3)
+  revokedAt  DateTime? @map("revoked_at") @db.Timestamptz(3)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([family])
+  @@map("refresh_tokens")
+}
+
+//edificios, espacios y equipos de la escuela
+model Building{
+  id         Int      @id @default(autoincrement())
+  code       String   @unique @db.VarChar(10)
+  name       String   @db.VarChar(100)
+  space Space[]
+
+  @@map("buildings")
+}
+
+model Space{
+  id         Int      @id @default(autoincrement())
+  buildingId Int      @map("building_id")
+  code       String   @db.VarChar(10)
+  name       String   @db.VarChar(100)
+  type       String   @db.VarChar(50)
+  floor      Int?
+  mapX      Decimal?   @map("map_x")  @db.Decimal(7,2)
+  mapY      Decimal?   @map("map_y") @db.Decimal(7,2)
+  active     Boolean  @default(true)
+  building   Building @relation(fields: [buildingId], references: [id])
+  equipment Equipment[]
+  tickets Ticket[]
+
+  @@unique([buildingId, code])
+  @@map("spaces")
+}
+
+model Equipment{
+  id        Int       @id @default(autoincrement())
+  spaceId   Int       @map("space_id")
+  type      String    @db.VarChar(20)
+  inventoryTag  String? @unique @map("inventory_tag") @db.VarChar(40)
+  description   String? @db.VarChar(20)
+  operativeState  String @default("OPERATIVO") @map("operative_state") @db.VarChar(15)
+  space Space @relation(fields: [spaceId], references: [id])
+  tickets Ticket[]
+
+  @@map("equipment")
+}
+
+model Category{
+  id    Int   @id @default(autoincrement())
+  name   String   @unique @db.VarChar(60)
+  description String?   @db.VarChar(200)
+  suggestedPriority String? @default("MEDIA") @map("suggested_priority") @db.VarChar(10)
+  active   Boolean  @default(true)
+  tickets   Ticket[]
+
+  @@map("categories")
+}
+
+model State{
+  id      Int      @id @default(autoincrement())
+  name  String   @unique @db.VarChar(20)
+  order   Int
+  isFinal Boolean  @default(false) @map("is_final")
+  tickets Ticket[]
+
+  @@map("states")
+}
+
+//tickets
+model Ticket{
+  id            Int       @id @default(autoincrement())
+  folio         String    @unique @db.VarChar(20)
+  title        String    @db.VarChar(150)
+  description   String
+  categoryId   Int       @map("category_id")
+  spaceId     Int       @map("space_id")
+  equipementId      Int?      @map("equipment_id")
+  priority     String    @default("MEDIA") @db.VarChar(10)
+  stateId      Int       @map("state_id")
+  reportantId  Int       @map("reportant_id")
+  assignedId    Int?      @map("assigned_id")
+  parentTicketId Int?      @map("parent_ticket_id")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  reconedAt  DateTime? @map("reconed_at") @db.Timestamptz(3)
+  resolvedAt    DateTime? @map("resolved_at") @db.Timestamptz(3)
+  closedAt     DateTime? @map("closed_at") @db.Timestamptz(3)
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  category  Category @relation(fields: [categoryId], references: [id])
+  space    Space   @relation(fields: [spaceId], references: [id])
+  equipment     Equipment?   @relation(fields: [equipementId], references: [id])
+  state     State    @relation(fields: [stateId], references: [id])
+  reportant User   @relation("Reportant", fields: [reportantId], references: [id])
+  assigned   User?  @relation("Assigned", fields: [assignedId], references: [id])
+  parent      Ticket?   @relation("Dupped", fields: [parentTicketId], references: [id])
+  child      Ticket[]  @relation("Dupped")
+  comments    Comment[]
+  evidence     Evidence[]
+  history      TicketHistory[]
+  notification Notification[]
+
+  @@index([stateId])
+  @@index([spaceId, stateId])
+  @@index([reportantId])
+  @@index([assignedId])
+  @@index([createdAt])
+
+  @@map("tickets")
+}
+
+model Comment{
+  id         Int         @id @default(autoincrement())
+  ticketId   Int         @map("ticket_id")
+  authorId    Int         @map("author_id")
+  content  String
+  isIntern  Boolean     @default(false) @map("is_intern")
+  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  ticket     Ticket      @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  author      User     @relation(fields: [authorId], references: [id])
+  evidence Evidence[]
+
+  @@index([ticketId, createdAt])
+
+  @@map("comments")
+}
+
+model Evidence{
+  id            Int         @id @default(autoincrement())
+  ticketId      Int         @map("ticket_id")
+  commentId     Int?        @map("comment_id")
+  uploadedBy    Int         @map("uploaded_by")
+  fileName      String      @map("file_name") @db.VarChar(100)
+  mimeType      String      @map("mime_type") @db.VarChar(100)
+  sizeBytes     Int         @map("size_bytes")
+  storageKey    String      @map("storage_key") @db.VarChar(255)
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  ticket        Ticket      @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  comment       Comment?    @relation(fields: [commentId], references: [id], onDelete: SetNull)
+  author        User        @relation(fields: [uploadedBy], references: [id])
+
+  @@map("evidence")
+}
+
+model TicketHistory{
+  id                 Int      @id @default(autoincrement())
+  ticketId           Int      @map("ticket_id")
+  userId          Int      @map("user_id")
+  action             String   @db.VarChar(30)
+  previosStateId   Int?     @map("previous_state_id")
+  newStateId      Int?     @map("new_state_id")
+  previousAssignedId Int?     @map("previous_assigned_id")
+  newAssignedId    Int?     @map("new_assigned_id")
+  detail            Json?
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  ticket             Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user            User  @relation("AuthorHistory", fields: [userId], references: [id])
+
+  @@index([ticketId, createdAt])
+  @@map("ticket_history")
+}
+
+model Notification{
+  id        Int      @id @default(autoincrement())
+  userId Int      @map("user_id")
+  ticketId  Int?     @map("ticket_id")
+  type      String   @db.VarChar(30)
+  message   String   @db.VarChar(255)
+  read     Boolean  @default(false)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  usuario   User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ticket    Ticket?  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read, createdAt(sort: Desc)])
+  @@map("notificaciones")
+}
+
+model Auditoria{
+  id        Int      @id @default(autoincrement())
+  userId Int      @map("user_id")
+  action    String   @db.VarChar(40)
+  entity   String   @db.VarChar(40)
+  entityId String?  @map("entity_id") @db.VarChar(40)
+  ip        String?  @db.VarChar(45)
+  detail   Json?
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@map("auditoria")
+}
+
+//folios para tickets
+model FolioSequence{
+  year    Int @id
+  last    Int @default(0)
+
+  @@map("folio_sequence")
+}
