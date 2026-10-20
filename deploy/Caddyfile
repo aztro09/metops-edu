@@ -1,0 +1,16 @@
+{$DOMAIN::80} {
+	encode gzip
+
+	handle /api/* {
+		reverse_proxy api:3000
+	}
+	handle /socket.io/* {
+		reverse_proxy api:3000
+	}
+	# /health y /metrics NO se exponen: solo se consultan dentro de la red de Docker.
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

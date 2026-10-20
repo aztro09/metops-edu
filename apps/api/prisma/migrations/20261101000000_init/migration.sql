@@ -1,7 +1,7 @@
 -- CreateTable
 CREATE TABLE "roles" (
     "id" SERIAL NOT NULL,
-    "name" TEXT NOT NULL,
+    "name" VARCHAR(30) NOT NULL,
     "description" VARCHAR(150),
 
     CONSTRAINT "roles_pkey" PRIMARY KEY ("id")
@@ -10,33 +10,32 @@ CREATE TABLE "roles" (
 -- CreateTable
 CREATE TABLE "users" (
     "id" SERIAL NOT NULL,
-    "password_institucional" VARCHAR(30) NOT NULL,
-    "name" VARCHAR(50) NOT NULL,
-    "surname" VARCHAR(100) NOT NULL,
-    "email" VARCHAR(100) NOT NULL,
+    "institutional_id" VARCHAR(20) NOT NULL,
+    "name" VARCHAR(80) NOT NULL,
+    "last_name" VARCHAR(120) NOT NULL,
+    "email" VARCHAR(150) NOT NULL,
     "password_hash" VARCHAR(255) NOT NULL,
     "active" BOOLEAN NOT NULL DEFAULT true,
     "created_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "last_access" TIMESTAMPTZ(3),
+    "last_access_at" TIMESTAMPTZ(3),
 
     CONSTRAINT "users_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "users_roles" (
+CREATE TABLE "user_roles" (
     "user_id" INTEGER NOT NULL,
     "role_id" INTEGER NOT NULL,
 
-    CONSTRAINT "users_roles_pkey" PRIMARY KEY ("user_id","role_id")
+    CONSTRAINT "user_roles_pkey" PRIMARY KEY ("user_id","role_id")
 );
 
 -- CreateTable
 CREATE TABLE "refresh_tokens" (
     "id" SERIAL NOT NULL,
-    "token" TEXT NOT NULL,
     "user_id" INTEGER NOT NULL,
     "family" VARCHAR(40) NOT NULL,
-    "hash_token" VARCHAR(64) NOT NULL,
+    "token_hash" VARCHAR(64) NOT NULL,
     "expires_at" TIMESTAMPTZ(3) NOT NULL,
     "used_at" TIMESTAMPTZ(3),
     "revoked_at" TIMESTAMPTZ(3),
@@ -49,7 +48,7 @@ CREATE TABLE "refresh_tokens" (
 CREATE TABLE "buildings" (
     "id" SERIAL NOT NULL,
     "code" VARCHAR(10) NOT NULL,
-    "name" VARCHAR(100) NOT NULL,
+    "name" VARCHAR(80) NOT NULL,
 
     CONSTRAINT "buildings_pkey" PRIMARY KEY ("id")
 );
@@ -58,9 +57,9 @@ CREATE TABLE "buildings" (
 CREATE TABLE "spaces" (
     "id" SERIAL NOT NULL,
     "building_id" INTEGER NOT NULL,
-    "code" VARCHAR(10) NOT NULL,
+    "code" VARCHAR(20) NOT NULL,
     "name" VARCHAR(100) NOT NULL,
-    "type" VARCHAR(50) NOT NULL,
+    "type" VARCHAR(15) NOT NULL,
     "floor" INTEGER,
     "map_x" DECIMAL(7,2),
     "map_y" DECIMAL(7,2),
@@ -75,8 +74,8 @@ CREATE TABLE "equipment" (
     "space_id" INTEGER NOT NULL,
     "type" VARCHAR(20) NOT NULL,
     "inventory_tag" VARCHAR(40),
-    "description" VARCHAR(20),
-    "operative_state" VARCHAR(15) NOT NULL DEFAULT 'OPERATIVO',
+    "description" VARCHAR(200),
+    "operational_status" VARCHAR(15) NOT NULL DEFAULT 'OPERATIVO',
 
     CONSTRAINT "equipment_pkey" PRIMARY KEY ("id")
 );
@@ -86,20 +85,20 @@ CREATE TABLE "categories" (
     "id" SERIAL NOT NULL,
     "name" VARCHAR(60) NOT NULL,
     "description" VARCHAR(200),
-    "suggested_priority" VARCHAR(10) DEFAULT 'MEDIA',
+    "suggested_priority" VARCHAR(10) NOT NULL DEFAULT 'MEDIA',
     "active" BOOLEAN NOT NULL DEFAULT true,
 
     CONSTRAINT "categories_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "states" (
+CREATE TABLE "statuses" (
     "id" SERIAL NOT NULL,
     "name" VARCHAR(20) NOT NULL,
-    "order" INTEGER NOT NULL,
+    "sort_order" INTEGER NOT NULL,
     "is_final" BOOLEAN NOT NULL DEFAULT false,
 
-    CONSTRAINT "states_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "statuses_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -112,12 +111,12 @@ CREATE TABLE "tickets" (
     "space_id" INTEGER NOT NULL,
     "equipment_id" INTEGER,
     "priority" VARCHAR(10) NOT NULL DEFAULT 'MEDIA',
-    "state_id" INTEGER NOT NULL,
-    "reportant_id" INTEGER NOT NULL,
-    "assigned_id" INTEGER,
+    "status_id" INTEGER NOT NULL,
+    "reporter_id" INTEGER NOT NULL,
+    "assignee_id" INTEGER,
     "parent_ticket_id" INTEGER,
     "created_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "reconed_at" TIMESTAMPTZ(3),
+    "acknowledged_at" TIMESTAMPTZ(3),
     "resolved_at" TIMESTAMPTZ(3),
     "closed_at" TIMESTAMPTZ(3),
     "updated_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -131,7 +130,7 @@ CREATE TABLE "comments" (
     "ticket_id" INTEGER NOT NULL,
     "author_id" INTEGER NOT NULL,
     "content" TEXT NOT NULL,
-    "is_intern" BOOLEAN NOT NULL DEFAULT false,
+    "is_internal" BOOLEAN NOT NULL DEFAULT false,
     "created_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "comments_pkey" PRIMARY KEY ("id")
@@ -143,7 +142,7 @@ CREATE TABLE "evidence" (
     "ticket_id" INTEGER NOT NULL,
     "comment_id" INTEGER,
     "uploaded_by" INTEGER NOT NULL,
-    "file_name" VARCHAR(100) NOT NULL,
+    "file_name" VARCHAR(255) NOT NULL,
     "mime_type" VARCHAR(100) NOT NULL,
     "size_bytes" INTEGER NOT NULL,
     "storage_key" VARCHAR(255) NOT NULL,
@@ -158,10 +157,10 @@ CREATE TABLE "ticket_history" (
     "ticket_id" INTEGER NOT NULL,
     "user_id" INTEGER NOT NULL,
     "action" VARCHAR(30) NOT NULL,
-    "previous_state_id" INTEGER,
-    "new_state_id" INTEGER,
-    "previous_assigned_id" INTEGER,
-    "new_assigned_id" INTEGER,
+    "previous_status_id" INTEGER,
+    "new_status_id" INTEGER,
+    "previous_assignee_id" INTEGER,
+    "new_assignee_id" INTEGER,
     "detail" JSONB,
     "created_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -169,20 +168,20 @@ CREATE TABLE "ticket_history" (
 );
 
 -- CreateTable
-CREATE TABLE "notificaciones" (
+CREATE TABLE "notifications" (
     "id" SERIAL NOT NULL,
     "user_id" INTEGER NOT NULL,
     "ticket_id" INTEGER,
     "type" VARCHAR(30) NOT NULL,
     "message" VARCHAR(255) NOT NULL,
-    "read" BOOLEAN NOT NULL DEFAULT false,
+    "is_read" BOOLEAN NOT NULL DEFAULT false,
     "created_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "notificaciones_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "notifications_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "auditoria" (
+CREATE TABLE "audit_log" (
     "id" SERIAL NOT NULL,
     "user_id" INTEGER NOT NULL,
     "action" VARCHAR(40) NOT NULL,
@@ -192,13 +191,25 @@ CREATE TABLE "auditoria" (
     "detail" JSONB,
     "created_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "auditoria_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "audit_log_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ai_summaries" (
+    "id" SERIAL NOT NULL,
+    "ticket_id" INTEGER NOT NULL,
+    "content" TEXT NOT NULL,
+    "model" VARCHAR(60) NOT NULL,
+    "requested_by" INTEGER NOT NULL,
+    "created_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "ai_summaries_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "folio_sequence" (
     "year" INTEGER NOT NULL,
-    "last" INTEGER NOT NULL DEFAULT 0,
+    "last_number" INTEGER NOT NULL DEFAULT 0,
 
     CONSTRAINT "folio_sequence_pkey" PRIMARY KEY ("year")
 );
@@ -207,16 +218,13 @@ CREATE TABLE "folio_sequence" (
 CREATE UNIQUE INDEX "roles_name_key" ON "roles"("name");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "users_password_institucional_key" ON "users"("password_institucional");
+CREATE UNIQUE INDEX "users_institutional_id_key" ON "users"("institutional_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "refresh_tokens_token_key" ON "refresh_tokens"("token");
-
--- CreateIndex
-CREATE UNIQUE INDEX "refresh_tokens_hash_token_key" ON "refresh_tokens"("hash_token");
+CREATE UNIQUE INDEX "refresh_tokens_token_hash_key" ON "refresh_tokens"("token_hash");
 
 -- CreateIndex
 CREATE INDEX "refresh_tokens_user_id_idx" ON "refresh_tokens"("user_id");
@@ -237,22 +245,22 @@ CREATE UNIQUE INDEX "equipment_inventory_tag_key" ON "equipment"("inventory_tag"
 CREATE UNIQUE INDEX "categories_name_key" ON "categories"("name");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "states_name_key" ON "states"("name");
+CREATE UNIQUE INDEX "statuses_name_key" ON "statuses"("name");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "tickets_folio_key" ON "tickets"("folio");
 
 -- CreateIndex
-CREATE INDEX "tickets_state_id_idx" ON "tickets"("state_id");
+CREATE INDEX "tickets_status_id_idx" ON "tickets"("status_id");
 
 -- CreateIndex
-CREATE INDEX "tickets_space_id_state_id_idx" ON "tickets"("space_id", "state_id");
+CREATE INDEX "tickets_space_id_status_id_idx" ON "tickets"("space_id", "status_id");
 
 -- CreateIndex
-CREATE INDEX "tickets_reportant_id_idx" ON "tickets"("reportant_id");
+CREATE INDEX "tickets_reporter_id_idx" ON "tickets"("reporter_id");
 
 -- CreateIndex
-CREATE INDEX "tickets_assigned_id_idx" ON "tickets"("assigned_id");
+CREATE INDEX "tickets_assignee_id_idx" ON "tickets"("assignee_id");
 
 -- CreateIndex
 CREATE INDEX "tickets_created_at_idx" ON "tickets"("created_at");
@@ -264,13 +272,16 @@ CREATE INDEX "comments_ticket_id_created_at_idx" ON "comments"("ticket_id", "cre
 CREATE INDEX "ticket_history_ticket_id_created_at_idx" ON "ticket_history"("ticket_id", "created_at");
 
 -- CreateIndex
-CREATE INDEX "notificaciones_user_id_read_created_at_idx" ON "notificaciones"("user_id", "read", "created_at" DESC);
+CREATE INDEX "notifications_user_id_is_read_created_at_idx" ON "notifications"("user_id", "is_read", "created_at" DESC);
+
+-- CreateIndex
+CREATE INDEX "ai_summaries_ticket_id_created_at_idx" ON "ai_summaries"("ticket_id", "created_at" DESC);
 
 -- AddForeignKey
-ALTER TABLE "users_roles" ADD CONSTRAINT "users_roles_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "user_roles" ADD CONSTRAINT "user_roles_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "users_roles" ADD CONSTRAINT "users_roles_role_id_fkey" FOREIGN KEY ("role_id") REFERENCES "roles"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "user_roles" ADD CONSTRAINT "user_roles_role_id_fkey" FOREIGN KEY ("role_id") REFERENCES "roles"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "refresh_tokens" ADD CONSTRAINT "refresh_tokens_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -291,13 +302,13 @@ ALTER TABLE "tickets" ADD CONSTRAINT "tickets_space_id_fkey" FOREIGN KEY ("space
 ALTER TABLE "tickets" ADD CONSTRAINT "tickets_equipment_id_fkey" FOREIGN KEY ("equipment_id") REFERENCES "equipment"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "tickets" ADD CONSTRAINT "tickets_state_id_fkey" FOREIGN KEY ("state_id") REFERENCES "states"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "tickets" ADD CONSTRAINT "tickets_status_id_fkey" FOREIGN KEY ("status_id") REFERENCES "statuses"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "tickets" ADD CONSTRAINT "tickets_reportant_id_fkey" FOREIGN KEY ("reportant_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "tickets" ADD CONSTRAINT "tickets_reporter_id_fkey" FOREIGN KEY ("reporter_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "tickets" ADD CONSTRAINT "tickets_assigned_id_fkey" FOREIGN KEY ("assigned_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "tickets" ADD CONSTRAINT "tickets_assignee_id_fkey" FOREIGN KEY ("assignee_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "tickets" ADD CONSTRAINT "tickets_parent_ticket_id_fkey" FOREIGN KEY ("parent_ticket_id") REFERENCES "tickets"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -324,7 +335,10 @@ ALTER TABLE "ticket_history" ADD CONSTRAINT "ticket_history_ticket_id_fkey" FORE
 ALTER TABLE "ticket_history" ADD CONSTRAINT "ticket_history_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "notificaciones" ADD CONSTRAINT "notificaciones_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "notifications" ADD CONSTRAINT "notifications_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "notificaciones" ADD CONSTRAINT "notificaciones_ticket_id_fkey" FOREIGN KEY ("ticket_id") REFERENCES "tickets"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "notifications" ADD CONSTRAINT "notifications_ticket_id_fkey" FOREIGN KEY ("ticket_id") REFERENCES "tickets"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ai_summaries" ADD CONSTRAINT "ai_summaries_ticket_id_fkey" FOREIGN KEY ("ticket_id") REFERENCES "tickets"("id") ON DELETE CASCADE ON UPDATE CASCADE;

@@ -1,0 +1,81 @@
+# Producción / piloto. Se ejecuta en el servidor Linux:  docker compose --env-file .env up -d
+name: metops
+services:
+  web:                              # Caddy: sirve el frontend compilado y hace de proxy hacia el api
+    build: { context: .., dockerfile: apps/web/Dockerfile }
+    image: metops-web:${TAG:-local}
+    environment:
+      DOMAIN: ${DOMAIN:-:80}        # ":80" = solo HTTP (red interna). Con un dominio público, Caddy obtiene el certificado solo.
+    ports: ["80:80", "443:443"]
+    volumes: [caddy_data:/data]
+    depends_on: [api]
+    restart: unless-stopped
+
+  api:
+    build: { context: .., dockerfile: apps/api/Dockerfile }
+    image: metops-api:${TAG:-local}
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://metops:${DB_PASSWORD:?define DB_PASSWORD}@db:5432/metops
+      JWT_SECRET: ${JWT_SECRET:?define JWT_SECRET (mínimo 32 caracteres)}
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}     # "false" solo si el piloto corre sin HTTPS
+      EVIDENCE_DIR: /data/evidencias
+      AI_ENABLED: "false"
+      OLLAMA_URL: http://ollama:11434
+    volumes: [evidencias:/data/evidencias]
+    depends_on:
+      db: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  migrate:                          # tarea de un solo uso: aplica las migraciones y crea el administrador inicial
+    image: metops-api:${TAG:-local}
+    command: ["sh", "-c", "node_modules/.bin/prisma migrate deploy && node dist/seed.js"]
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://metops:${DB_PASSWORD:?define DB_PASSWORD}@db:5432/metops
+      ADMIN_CORREO: ${ADMIN_CORREO:?define ADMIN_CORREO}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?define ADMIN_PASSWORD}
+      ADMIN_CLAVE: ${ADMIN_CLAVE:-ADMIN0001}
+    depends_on:
+      db: { condition: service_healthy }
+    restart: "no"
+
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: metops
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?define DB_PASSWORD}
+      POSTGRES_DB: metops
+    volumes: [pgdata:/var/lib/postgresql/data]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U metops -d metops"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  prometheus:                       # opcional: docker compose --profile observability up -d
+    image: prom/prometheus
+    profiles: ["observability"]
+    volumes: [./prometheus.yml:/etc/prometheus/prometheus.yml:ro]
+    restart: unless-stopped
+  grafana:
+    image: grafana/grafana
+    profiles: ["observability"]
+    ports: ["127.0.0.1:3001:3000"]  # solo accesible desde el propio servidor (usa un túnel SSH para verlo)
+    volumes: [grafana:/var/lib/grafana]
+    restart: unless-stopped
+
+  ollama:                           # opcional: docker compose --profile ai up -d
+    image: ollama/ollama
+    profiles: ["ai"]
+    volumes: [ollama:/root/.ollama]
+    restart: unless-stopped
+
+volumes: { caddy_data: {}, evidencias: {}, pgdata: {}, grafana: {}, ollama: {} }

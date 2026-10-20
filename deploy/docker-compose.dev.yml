@@ -1,3 +1,5 @@
+# Servicios de apoyo para desarrollo. El api y el web corren en Windows con `pnpm dev`.
+name: metops-dev
 services:
   db:
     image: postgres:17
@@ -5,14 +7,14 @@ services:
       POSTGRES_USER: metops
       POSTGRES_PASSWORD: metops_dev2639
       POSTGRES_DB: metops
-    ports: ["5433:5432"]
-    volumes: [pgdata:/var/lib/postgresql/data]
+    ports: ["5433:5432"]          # si 5432 está ocupado en tu PC, usa "5433:5432" y ajusta DATABASE_URL
+    volumes: [pgdata:/var/lib/postgresql/data]   # volumen con nombre: más rápido y sin problemas de permisos en Windows
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U metops -d metops"]
-      interval: 30s
-      timeout: 60s
-      retries: 5
-  mailpit:                  # correo falso para probar "recuperar contraseña"
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  mailpit:                        # correo falso (para "recuperar contraseña" cuando lo implementes)
     image: axllent/mailpit
     ports: ["8025:8025", "1025:1025"]
 volumes:

@@ -1,258 +1,273 @@
-generator client{
-  provider = "prisma-client-js"
+generator client {
+  provider   = "prisma-client-js"
   engineType = "client"
 }
 
 datasource db {
   provider = "postgresql"
-  url = env("DATABASE_URL") //modificar dependiendo de db
+  url      = env("DATABASE_URL")
 }
 
-//seguridad / usuarios
-model Role{
-  id         Int      @id @default(autoincrement())
-  name        String   @unique
-  description String?  @db.VarChar(150)
-  users       UserRole[]
+// ============ Seguridad / usuarios ============
+model Rol {
+  id          Int          @id @default(autoincrement())
+  nombre      String       @unique @map("name") @db.VarChar(30)
+  descripcion String?      @map("description") @db.VarChar(150)
+  usuarios    UsuarioRol[]
 
   @@map("roles")
 }
 
-model User{
-  id         Int      @id @default(autoincrement())
-  passwordInstitucional   String   @unique @map("password_institucional") @db.VarChar(30)
-  name    String   @db.VarChar(50)
-  surname  String   @db.VarChar(100)
-  email    String   @unique @db.VarChar(100)
-  passwordHash String   @map("password_hash") @db.VarChar(255)
-  active   Boolean  @default(true)
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  lastAccess DateTime? @map("last_access") @db.Timestamptz(3)
-  roles     UserRole[]
-  createdTickets Ticket[] @relation("Reportant")
-  assignedTickets Ticket[] @relation("Assigned")
-  comments Comment[]
-  evidences Evidence[]
-  history TicketHistory[] @relation("AuthorHistory")
-  notifications Notification[]
-  refreshTokens RefreshToken[]
+model Usuario {
+  id                 Int       @id @default(autoincrement())
+  claveInstitucional String    @unique @map("institutional_id") @db.VarChar(20)
+  nombre             String    @map("name") @db.VarChar(80)
+  apellidos          String    @map("last_name") @db.VarChar(120)
+  correo             String    @unique @map("email") @db.VarChar(150)
+  passwordHash       String    @map("password_hash") @db.VarChar(255)
+  activo             Boolean   @default(true) @map("active")
+  creadoAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  ultimoAcceso       DateTime? @map("last_access_at") @db.Timestamptz(3)
+
+  roles            UsuarioRol[]
+  ticketsCreados   Ticket[]          @relation("Reportante")
+  ticketsAsignados Ticket[]          @relation("Asignado")
+  comentarios      Comentario[]
+  evidencias       Evidencia[]
+  historial        HistorialTicket[] @relation("HistorialAutor")
+  notificaciones   Notificacion[]
+  refreshTokens    RefreshToken[]
 
   @@map("users")
 }
 
-model UserRole{
-  userId     Int      @map("user_id")
-  roleId     Int      @map("role_id")
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role       Role     @relation(fields: [roleId], references: [id])
+model UsuarioRol {
+  usuarioId Int     @map("user_id")
+  rolId     Int     @map("role_id")
+  usuario   Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  rol       Rol     @relation(fields: [rolId], references: [id])
 
-  @@id([userId, roleId])
-  @@map("users_roles")
+  @@id([usuarioId, rolId])
+  @@map("user_roles")
 }
 
-model RefreshToken{
-  id         Int      @id @default(autoincrement())
-  token      String   @unique
-  userId     Int      @map("user_id")
-  family     String   @db.VarChar(40)
-  hashToken  String   @unique @map("hash_token") @db.VarChar(64)
-  expiresAt  DateTime @map("expires_at") @db.Timestamptz(3)
-  usedAt     DateTime? @map("used_at") @db.Timestamptz(3)
-  revokedAt  DateTime? @map("revoked_at") @db.Timestamptz(3)
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+model RefreshToken {
+  id         Int       @id @default(autoincrement())
+  usuarioId  Int       @map("user_id")
+  familia    String    @map("family") @db.VarChar(40)
+  tokenHash  String    @unique @map("token_hash") @db.VarChar(64)
+  expiraAt   DateTime  @map("expires_at") @db.Timestamptz(3)
+  usadoAt    DateTime? @map("used_at") @db.Timestamptz(3)
+  revocadoAt DateTime? @map("revoked_at") @db.Timestamptz(3)
+  creadoAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  usuario    Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
-  @@index([userId])
-  @@index([family])
+  @@index([usuarioId])
+  @@index([familia])
   @@map("refresh_tokens")
 }
 
-//edificios, espacios y equipos de la escuela
-model Building{
-  id         Int      @id @default(autoincrement())
-  code       String   @unique @db.VarChar(10)
-  name       String   @db.VarChar(100)
-  space Space[]
+// ============ Infraestructura ============
+model Edificio {
+  id       Int       @id @default(autoincrement())
+  codigo   String    @unique @map("code") @db.VarChar(10)
+  nombre   String    @map("name") @db.VarChar(80)
+  espacios Espacio[]
 
   @@map("buildings")
 }
 
-model Space{
+model Espacio {
   id         Int      @id @default(autoincrement())
-  buildingId Int      @map("building_id")
-  code       String   @db.VarChar(10)
-  name       String   @db.VarChar(100)
-  type       String   @db.VarChar(50)
-  floor      Int?
-  mapX      Decimal?   @map("map_x")  @db.Decimal(7,2)
-  mapY      Decimal?   @map("map_y") @db.Decimal(7,2)
-  active     Boolean  @default(true)
-  building   Building @relation(fields: [buildingId], references: [id])
-  equipment Equipment[]
-  tickets Ticket[]
+  edificioId Int      @map("building_id")
+  codigo     String   @map("code") @db.VarChar(20)
+  nombre     String   @map("name") @db.VarChar(100)
+  tipo       String   @map("type") @db.VarChar(15)
+  piso       Int? @map("floor")
+  mapaX      Decimal? @map("map_x") @db.Decimal(7, 2)
+  mapaY      Decimal? @map("map_y") @db.Decimal(7, 2)
+  activo     Boolean  @default(true) @map("active")
+  edificio   Edificio @relation(fields: [edificioId], references: [id])
+  equipos    Equipo[]
+  tickets    Ticket[]
 
-  @@unique([buildingId, code])
+  @@unique([edificioId, codigo])
   @@map("spaces")
 }
 
-model Equipment{
-  id        Int       @id @default(autoincrement())
-  spaceId   Int       @map("space_id")
-  type      String    @db.VarChar(20)
-  inventoryTag  String? @unique @map("inventory_tag") @db.VarChar(40)
-  description   String? @db.VarChar(20)
-  operativeState  String @default("OPERATIVO") @map("operative_state") @db.VarChar(15)
-  space Space @relation(fields: [spaceId], references: [id])
-  tickets Ticket[]
+model Equipo {
+  id                 Int      @id @default(autoincrement())
+  espacioId          Int      @map("space_id")
+  tipo               String   @map("type") @db.VarChar(20)
+  etiquetaInventario String?  @unique @map("inventory_tag") @db.VarChar(40)
+  descripcion        String?  @map("description") @db.VarChar(200)
+  estadoOperativo    String   @default("OPERATIVO") @map("operational_status") @db.VarChar(15)
+  espacio            Espacio  @relation(fields: [espacioId], references: [id])
+  tickets            Ticket[]
 
   @@map("equipment")
 }
 
-model Category{
-  id    Int   @id @default(autoincrement())
-  name   String   @unique @db.VarChar(60)
-  description String?   @db.VarChar(200)
-  suggestedPriority String? @default("MEDIA") @map("suggested_priority") @db.VarChar(10)
-  active   Boolean  @default(true)
-  tickets   Ticket[]
+// ============ Catálogos de tickets ============
+model Categoria {
+  id                Int      @id @default(autoincrement())
+  nombre            String   @unique @map("name") @db.VarChar(60)
+  descripcion       String?  @map("description") @db.VarChar(200)
+  prioridadSugerida String   @default("MEDIA") @map("suggested_priority") @db.VarChar(10)
+  activa            Boolean  @default(true) @map("active")
+  tickets           Ticket[]
 
   @@map("categories")
 }
 
-model State{
+model Estado {
   id      Int      @id @default(autoincrement())
-  name  String   @unique @db.VarChar(20)
-  order   Int
-  isFinal Boolean  @default(false) @map("is_final")
+  nombre  String   @unique @map("name") @db.VarChar(20)
+  orden   Int@map("sort_order")
+  esFinal Boolean  @default(false) @map("is_final")
   tickets Ticket[]
 
-  @@map("states")
+  @@map("statuses")
 }
 
-//tickets
-model Ticket{
+// ============ Tickets ============
+model Ticket {
   id            Int       @id @default(autoincrement())
   folio         String    @unique @db.VarChar(20)
-  title        String    @db.VarChar(150)
-  description   String
-  categoryId   Int       @map("category_id")
-  spaceId     Int       @map("space_id")
-  equipementId      Int?      @map("equipment_id")
-  priority     String    @default("MEDIA") @db.VarChar(10)
-  stateId      Int       @map("state_id")
-  reportantId  Int       @map("reportant_id")
-  assignedId    Int?      @map("assigned_id")
-  parentTicketId Int?      @map("parent_ticket_id")
-  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  reconedAt  DateTime? @map("reconed_at") @db.Timestamptz(3)
-  resolvedAt    DateTime? @map("resolved_at") @db.Timestamptz(3)
-  closedAt     DateTime? @map("closed_at") @db.Timestamptz(3)
-  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
-  category  Category @relation(fields: [categoryId], references: [id])
-  space    Space   @relation(fields: [spaceId], references: [id])
-  equipment     Equipment?   @relation(fields: [equipementId], references: [id])
-  state     State    @relation(fields: [stateId], references: [id])
-  reportant User   @relation("Reportant", fields: [reportantId], references: [id])
-  assigned   User?  @relation("Assigned", fields: [assignedId], references: [id])
-  parent      Ticket?   @relation("Dupped", fields: [parentTicketId], references: [id])
-  child      Ticket[]  @relation("Dupped")
-  comments    Comment[]
-  evidence     Evidence[]
-  history      TicketHistory[]
-  notification Notification[]
+  titulo        String    @map("title") @db.VarChar(150)
+  descripcion   String@map("description")
+  categoriaId   Int       @map("category_id")
+  espacioId     Int       @map("space_id")
+  equipoId      Int?      @map("equipment_id")
+  prioridad     String    @default("MEDIA") @map("priority") @db.VarChar(10)
+  estadoId      Int       @map("status_id")
+  reportanteId  Int       @map("reporter_id")
+  asignadoId    Int?      @map("assignee_id")
+  ticketPadreId Int?      @map("parent_ticket_id")
+  creadoAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  reconocidoAt  DateTime? @map("acknowledged_at") @db.Timestamptz(3)
+  resueltoAt    DateTime? @map("resolved_at") @db.Timestamptz(3)
+  cerradoAt     DateTime? @map("closed_at") @db.Timestamptz(3)
+  actualizadoAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  @@index([stateId])
-  @@index([spaceId, stateId])
-  @@index([reportantId])
-  @@index([assignedId])
-  @@index([createdAt])
+  categoria  Categoria @relation(fields: [categoriaId], references: [id])
+  espacio    Espacio   @relation(fields: [espacioId], references: [id])
+  equipo     Equipo?   @relation(fields: [equipoId], references: [id])
+  estado     Estado    @relation(fields: [estadoId], references: [id])
+  reportante Usuario   @relation("Reportante", fields: [reportanteId], references: [id])
+  asignado   Usuario?  @relation("Asignado", fields: [asignadoId], references: [id])
+  padre      Ticket?   @relation("Duplicados", fields: [ticketPadreId], references: [id])
+  hijos      Ticket[]  @relation("Duplicados")
 
+  comentarios    Comentario[]
+  evidencias     Evidencia[]
+  historial      HistorialTicket[]
+  notificaciones Notificacion[]
+  resumenes      ResumenIa[]
+
+  @@index([estadoId])
+  @@index([espacioId, estadoId])
+  @@index([reportanteId])
+  @@index([asignadoId])
+  @@index([creadoAt])
   @@map("tickets")
 }
 
-model Comment{
+model Comentario {
   id         Int         @id @default(autoincrement())
   ticketId   Int         @map("ticket_id")
-  authorId    Int         @map("author_id")
-  content  String
-  isIntern  Boolean     @default(false) @map("is_intern")
-  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  autorId    Int         @map("author_id")
+  contenido  String@map("content")
+  esInterno  Boolean     @default(false) @map("is_internal")
+  creadoAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
   ticket     Ticket      @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  author      User     @relation(fields: [authorId], references: [id])
-  evidence Evidence[]
+  autor      Usuario     @relation(fields: [autorId], references: [id])
+  evidencias Evidencia[]
 
-  @@index([ticketId, createdAt])
-
+  @@index([ticketId, creadoAt])
   @@map("comments")
 }
 
-model Evidence{
+model Evidencia {
   id            Int         @id @default(autoincrement())
   ticketId      Int         @map("ticket_id")
-  commentId     Int?        @map("comment_id")
-  uploadedBy    Int         @map("uploaded_by")
-  fileName      String      @map("file_name") @db.VarChar(100)
-  mimeType      String      @map("mime_type") @db.VarChar(100)
-  sizeBytes     Int         @map("size_bytes")
+  comentarioId  Int?        @map("comment_id")
+  subidoPor     Int         @map("uploaded_by")
+  nombreArchivo String      @map("file_name") @db.VarChar(255)
+  tipoMime      String      @map("mime_type") @db.VarChar(100)
+  tamanoBytes   Int         @map("size_bytes")
   storageKey    String      @map("storage_key") @db.VarChar(255)
-  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  creadoAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
   ticket        Ticket      @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  comment       Comment?    @relation(fields: [commentId], references: [id], onDelete: SetNull)
-  author        User        @relation(fields: [uploadedBy], references: [id])
+  comentario    Comentario? @relation(fields: [comentarioId], references: [id], onDelete: SetNull)
+  autor         Usuario     @relation(fields: [subidoPor], references: [id])
 
   @@map("evidence")
 }
 
-model TicketHistory{
+model HistorialTicket {
   id                 Int      @id @default(autoincrement())
   ticketId           Int      @map("ticket_id")
-  userId          Int      @map("user_id")
-  action             String   @db.VarChar(30)
-  previosStateId   Int?     @map("previous_state_id")
-  newStateId      Int?     @map("new_state_id")
-  previousAssignedId Int?     @map("previous_assigned_id")
-  newAssignedId    Int?     @map("new_assigned_id")
-  detail            Json?
-  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  usuarioId          Int      @map("user_id")
+  accion             String   @map("action") @db.VarChar(30)
+  estadoAnteriorId   Int?     @map("previous_status_id")
+  estadoNuevoId      Int?     @map("new_status_id")
+  asignadoAnteriorId Int?     @map("previous_assignee_id")
+  asignadoNuevoId    Int?     @map("new_assignee_id")
+  detalle            Json? @map("detail")
+  creadoAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   ticket             Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  user            User  @relation("AuthorHistory", fields: [userId], references: [id])
+  usuario            Usuario  @relation("HistorialAutor", fields: [usuarioId], references: [id])
 
-  @@index([ticketId, createdAt])
+  @@index([ticketId, creadoAt])
   @@map("ticket_history")
 }
 
-model Notification{
+model Notificacion {
   id        Int      @id @default(autoincrement())
-  userId Int      @map("user_id")
+  usuarioId Int      @map("user_id")
   ticketId  Int?     @map("ticket_id")
-  type      String   @db.VarChar(30)
-  message   String   @db.VarChar(255)
-  read     Boolean  @default(false)
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  usuario   User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tipo      String   @map("type") @db.VarChar(30)
+  mensaje   String   @map("message") @db.VarChar(255)
+  leida     Boolean  @default(false) @map("is_read")
+  creadoAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   ticket    Ticket?  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
-  @@index([userId, read, createdAt(sort: Desc)])
-  @@map("notificaciones")
+  @@index([usuarioId, leida, creadoAt(sort: Desc)])
+  @@map("notifications")
 }
 
-model Auditoria{
+model Auditoria {
   id        Int      @id @default(autoincrement())
-  userId Int      @map("user_id")
-  action    String   @db.VarChar(40)
-  entity   String   @db.VarChar(40)
-  entityId String?  @map("entity_id") @db.VarChar(40)
+  usuarioId Int      @map("user_id")
+  accion    String   @map("action") @db.VarChar(40)
+  entidad   String   @map("entity") @db.VarChar(40)
+  entidadId String?  @map("entity_id") @db.VarChar(40)
   ip        String?  @db.VarChar(45)
-  detail   Json?
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  detalle   Json? @map("detail")
+  creadoAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  @@map("auditoria")
+  @@map("audit_log")
 }
 
-//folios para tickets
-model FolioSequence{
-  year    Int @id
-  last    Int @default(0)
+model ResumenIa {
+  id            Int      @id @default(autoincrement())
+  ticketId      Int      @map("ticket_id")
+  contenido     String@map("content")
+  modelo        String   @map("model") @db.VarChar(60)
+  solicitadoPor Int      @map("requested_by")
+  creadoAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  ticket        Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId, creadoAt(sort: Desc)])
+  @@map("ai_summaries")
+}
+
+/// Contador de folios por año (MO-AAAA-00001). Se incrementa dentro de la transacción de crear ticket.
+model FolioSecuencia {
+  anio   Int @id @map("year")
+  ultimo Int @default(0) @map("last_number")
 
   @@map("folio_sequence")
 }

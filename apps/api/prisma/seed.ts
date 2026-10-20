@@ -1,70 +1,67 @@
-//creacion de roles y estadios
-import { create } from 'domain';
-import {createPrisma} from '../src/core/db';
-import {hashPassword} from '../src/core/security';
+import { crearPrisma } from '../src/core/db';
+import { hashPassword } from '../src/core/seguridad';
 
-const prisma = createPrisma(process.env.DATA_URL!);
+const prisma = crearPrisma(process.env.DATABASE_URL!);
 
-async function user(d: {key: string, name: string; surname: string; email: string; password: string; roles: string[]}){
-  const roles = await prisma.rol.findMany({where: {name: {in: d.roles}}});
-  const exists = await prisma.user.findUnique({where: {email: d.email}});
-
-  if(exists) return exists;
-
-  return prisma.user.create({
+async function usuario(d: { clave: string; nombre: string; apellidos: string; correo: string; password: string; roles: string[] }) {
+  const roles = await prisma.rol.findMany({ where: { nombre: { in: d.roles } } });
+  const existente = await prisma.usuario.findUnique({ where: { correo: d.correo } });
+  if (existente) return existente;
+  return prisma.usuario.create({
     data: {
-      passwordInstitucional: d.key, name: d.name, surname: d.surname, email: d.email,
-      passwordHash: await hashPassword(d.password), active: true,
-      roles: {create: roles.map((r) => ({roleId: roles.id})},
+      claveInstitucional: d.clave, nombre: d.nombre, apellidos: d.apellidos, correo: d.correo,
+      passwordHash: await hashPassword(d.password), activo: true,
+      roles: { create: roles.map((r) => ({ rolId: r.id })) },
     },
   });
 }
 
-async function main(){
-  //administrador
-  await user({
-    key: process.env.ADMIN_KEY ?? 'ADMIN1', name: 'Administrator', surname: 'MetOps', email: (process.env.ADMIN_EMAIL ?? 'admin@metops/local').toLowerCase(),
-    password: process.env.ADMIN_PASSWORD ?? 'admin2639.metops', roles: ['ADMINISTRADOR'],
+async function main() {
+  // ---- Administrador inicial (obligatorio) ----
+  await usuario({
+    clave: process.env.ADMIN_CLAVE ?? 'ADMIN0001', nombre: 'Administrador', apellidos: 'MetOps',
+    correo: (process.env.ADMIN_CORREO ?? 'admin@metops.local').toLowerCase(),
+    password: process.env.ADMIN_PASSWORD ?? 'Cambiar.Esta.Clave.123', roles: ['ADMINISTRADOR'],
   });
 
-  //categorias
-  const categories: [string, string][] = [
-    ['Proyector', 'MEDIA'], ['Red / Wi-Fi', 'ALTA'], ['Computadora', 'MEDIA'], ['Impresora', 'BAJA'],    ['Mobiliario / Instalaciones', 'BAJA'], ['Disponibilidad de espacio', 'MEDIA'], ['Software', 'BAJA'],
+  // ---- Categorías base (ASI 6) ----
+  const categorias: [string, string][] = [
+    ['Proyector', 'MEDIA'], ['Red / Wi-Fi', 'ALTA'], ['Computadora', 'MEDIA'], ['Impresora', 'BAJA'],
+    ['Mobiliario / Instalaciones', 'BAJA'], ['Disponibilidad de espacio', 'MEDIA'], ['Software', 'BAJA'],
   ];
-  for (const [name, suggestedPriority] of categories){
-    await prisma.category.upsert({ where: {name}, update: {}, create: {name, suggestedPriority}});
+  for (const [nombre, prioridadSugerida] of categorias) {
+    await prisma.categoria.upsert({ where: { nombre }, update: {}, create: { nombre, prioridadSugerida } });
   }
 
-  //datos ejemplo
-  if (process.env.NODE_ENV !== 'production'){
-    const pass = 'prueba.demo2639';
-    await user({key: 'TEC1', name: 'David', surname: 'Rodriguez', email: 'tecnico1@metops.local', password: pass, roles:['TECNICO']});
-    await user({ key: '2022630276', name: 'Andres', surname: 'Galicia', email: 'alumno@metops.local', password: pass, roles: ['ALUMNO'] });
-    await user({ key: 'DOC1', name: 'Diego', surname: 'Docente', email: 'docente@metops.local', password: pass, roles: ['DOCENTE'] });
+  // ---- Solo en desarrollo: datos de ejemplo para probar la interfaz ----
+  if (process.env.NODE_ENV !== 'production') {
+    const clave = 'Demo.Password.123';
+    await usuario({ clave: 'TEC0001', nombre: 'Tomás', apellidos: 'Técnico', correo: 'tecnico@metops.local', password: clave, roles: ['TECNICO'] });
+    await usuario({ clave: '2020630001', nombre: 'Ana', apellidos: 'Alumna', correo: 'alumno@metops.local', password: clave, roles: ['ALUMNO'] });
+    await usuario({ clave: 'DOC0001', nombre: 'Diego', apellidos: 'Docente', correo: 'docente@metops.local', password: clave, roles: ['DOCENTE'] });
 
-    const bu = await prisma.building.upsert({where: {code: 'E2'}, update:{}, create: {code: 'E2', name: 'Edificio 2'}});
-
-    const spaces = [
-      { code: 'A-201', name: 'Salón A-201', type: 'SALON', x: 0, y: 0 },
-      { code: 'A-202', name: 'Salón A-202', type: 'SALON', x: 1, y: 0 },
-      { code: 'A-203', name: 'Salón A-203', type: 'SALON', x: 2, y: 0 },
-      { code: 'A-204', name: 'Salón A-204', type: 'SALON', x: 3, y: 0 },
-      { code: 'LAB1', name: 'Laboratorio 1', type: 'LABORATORIO', x: 0, y: 1 },
-      { code: 'LAB2', name: 'Laboratorio 2', type: 'LABORATORIO', x: 1, y: 1 },
-      { code: 'LAB3', name: 'Laboratorio 3', type: 'LABORATORIO', x: 2, y: 1 },
+    const ed = await prisma.edificio.upsert({ where: { codigo: 'E2' }, update: {}, create: { codigo: 'E2', nombre: 'Edificio 2' } });
+    const espacios = [
+      { codigo: 'A-201', nombre: 'Salón A-201', tipo: 'SALON', x: 0, y: 0 },
+      { codigo: 'A-202', nombre: 'Salón A-202', tipo: 'SALON', x: 1, y: 0 },
+      { codigo: 'A-203', nombre: 'Salón A-203', tipo: 'SALON', x: 2, y: 0 },
+      { codigo: 'A-204', nombre: 'Salón A-204', tipo: 'SALON', x: 3, y: 0 },
+      { codigo: 'LAB1', nombre: 'Laboratorio 1', tipo: 'LABORATORIO', x: 0, y: 1 },
+      { codigo: 'LAB2', nombre: 'Laboratorio 2', tipo: 'LABORATORIO', x: 1, y: 1 },
+      { codigo: 'LAB3', nombre: 'Laboratorio 3', tipo: 'LABORATORIO', x: 2, y: 1 },
     ];
-    for(const s of spaces){
-      const spa = await prisma.space.upsert({
-        where:{ buildingId_code: {buildingId: bu.id, code: s.code}}, update:{},
-        create:{ buildingId: bu.id, code: s.code, name: s.name, type: s.type, floor: 0, mapX: s.x, mapY: s.y},
+    for (const e of espacios) {
+      const esp = await prisma.espacio.upsert({
+        where: { edificioId_codigo: { edificioId: ed.id, codigo: e.codigo } }, update: {},
+        create: { edificioId: ed.id, codigo: e.codigo, nombre: e.nombre, tipo: e.tipo, piso: 0, mapaX: e.x, mapaY: e.y },
       });
-      await prisma.equipment.upsert({
-        where: { inventoryTag: 'PRY-${s.code}'}, update:{},
-        create: {spaceId: spa.id, type: 'PROYECTOR', inventoryTag: 'PRY-${s.code}', type: 'PROYECTOR', description: 'Proyector'},
+      await prisma.equipo.upsert({
+        where: { etiquetaInventario: `PRY-${e.codigo}` }, update: {},
+        create: { espacioId: esp.id, tipo: 'PROYECTOR', etiquetaInventario: `PRY-${e.codigo}`, descripcion: `Proyector de ${e.nombre}` },
       });
     }
   }
-  console.log('Seed completed');
+  console.log('Seed completado');
 }
 
 main().finally(() => prisma.$disconnect());

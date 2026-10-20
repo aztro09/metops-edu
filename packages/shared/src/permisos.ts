@@ -1,31 +1,31 @@
-import type {Role, EstadoNombre} from './catalogos';
+import type { Rol, EstadoNombre } from './catalogos';
 
-/*Matriz RBAC de permisos*/
+/** Matriz RBAC del EVS 3 (sección 3.4). Un usuario puede tener varios roles. */
 export const PERMISOS = {
-  'ticket:crear': ['ALUMNO', 'DOCENTE', 'ADMINISTRADOR', 'TECNICO'] as Role[],
-  'ticket:ver-todos': ['ADMINISTRADOR', 'TECNICO'] as Role[],
-  'ticket:ver-propios': ['ALUMNO', 'DOCENTE'] as Role[],
-  'ticket:nota-interna': ['ADMINISTRADOR', 'TECNICO'] as Role[],
-  'ticket:tomar': ['TECNICO','ADMINISTRADOR'] as Role[],
-  'ticket:asignar': ['ADMINISTRADOR'] as Role[],
-  'ticket:cambiar-estado': ['TECNICO','ADMINISTRADOR'] as Role[],
-  'ticket:escalar': ['TECNICO','ADMINISTRADOR'] as Role[],
-  'ticket:reabrir': ['ADMINISTRADOR'] as Role[],
-  'ticket:priorizar': ['ADMINISTRADOR'] as Role[],
-  'ticket:resumen': ['ADMINISTRADOR', 'TECNICO'] as Role[],
-  'analitica:ver': ['ADMINISTRADOR', 'TECNICO'] as Role[],
-  'reportes:exportar': ['ADMINISTRADOR'] as Role[],
-  'usuarios:gestionar': ['ADMINISTRADOR'] as Role[],
-  'catalogos:gestionar': ['ADMINISTRADOR'] as Role[],
-} as const satisfies Record<string, Role[]>;
+  'ticket:crear': ['ALUMNO', 'DOCENTE', 'TECNICO', 'ADMINISTRADOR'],
+  'ticket:ver-todos': ['TECNICO', 'ADMINISTRADOR'],
+  'ticket:nota-interna': ['TECNICO', 'ADMINISTRADOR'],
+  'ticket:tomar': ['TECNICO', 'ADMINISTRADOR'],
+  'ticket:asignar': ['ADMINISTRADOR'],
+  'ticket:cambiar-estado': ['TECNICO', 'ADMINISTRADOR'],
+  'ticket:escalar': ['TECNICO', 'ADMINISTRADOR'],
+  'ticket:reabrir': ['ADMINISTRADOR'],
+  'ticket:priorizar': ['ADMINISTRADOR'],
+  'ticket:resumen': ['TECNICO', 'ADMINISTRADOR'],
+  'analitica:ver': ['TECNICO', 'ADMINISTRADOR'],
+  'reportes:exportar': ['ADMINISTRADOR'],
+  'usuarios:gestionar': ['ADMINISTRADOR'],
+  'catalogos:gestionar': ['ADMINISTRADOR'],
+} as const satisfies Record<string, readonly Rol[]>;
 
 export type Permiso = keyof typeof PERMISOS;
-export const puede = (roles: readonly Role[], permiso: Permiso): boolean =>
-  roles.some((r) => (PERMISOS[permiso] as readonly Role[]).includes(r));
 
-export const esPersonal = (roles: readonly Role[]) => puede(roles, 'ticket:ver-todos');
+export const puede = (roles: readonly Rol[], permiso: Permiso): boolean =>
+  roles.some((r) => (PERMISOS[permiso] as readonly Rol[]).includes(r));
 
-/*Flujo estados de tickts*/
+export const esPersonal = (roles: readonly Rol[]) => puede(roles, 'ticket:ver-todos');
+
+/** Flujo de estados (RF-12). Reabrir y cerrar tienen reglas propias (RN-02, RN-08). */
 export const TRANSICIONES: Record<EstadoNombre, readonly EstadoNombre[]> = {
   ABIERTO: ['EN_PROCESO'],
   EN_PROCESO: ['PENDIENTE', 'RESUELTO'],
@@ -34,4 +34,5 @@ export const TRANSICIONES: Record<EstadoNombre, readonly EstadoNombre[]> = {
   CERRADO: [],
 };
 
-export const transicionValida = (de: EstadoNombre, a:EstadoNombre) => TRANSICIONES[de].includes(a);
+export const transicionValida = (de: EstadoNombre, a: EstadoNombre) =>
+  TRANSICIONES[de].includes(a);

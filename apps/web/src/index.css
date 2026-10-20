@@ -1,0 +1,27 @@
+@import 'tailwindcss';
+
+/* Paleta de los mockups: negro, blanco y un azul. El gris solo se usa para texto secundario y bordes. */
+@theme {
+  --color-ink: #1d1d1f;
+  --color-mute: #6e6e73;
+  --color-line: #d2d2d7;
+  --color-hairline: #e8e8ed;
+  --color-surface: #f5f5f7;
+  --color-brand: #0071e3;
+  --color-brand-dark: #0058b0;
+  --color-danger: #b3261e;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+html {
+  font-family: var(--font-sans);
+}
+body {
+  background: #fff;
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+}
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
